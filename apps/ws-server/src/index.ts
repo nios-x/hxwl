@@ -2,6 +2,10 @@ import express from "express"
 import WebSocket, { WebSocketServer } from 'ws';
 import { Kafka } from "kafkajs";
 import client from "prom-client";
+import dns from "node:dns/promises";
+import os from "node:os";
+
+
 const kafka = new Kafka({
     clientId: "ws-server", brokers: [process.env.KAFKA_BROKER ?? "localhost:9092"]
 })
@@ -27,6 +31,34 @@ const server = app.listen(PORT, () => {
 })
 
 const wss = new WebSocketServer({ server: server })
+
+// Docker's DNS knows each replica by the name "docker compose ps" shows, so charts can use it.
+// Outside Docker there is no such name, so fall back to the hostname.
+async function serverName() {
+    try {
+        const { address } = await dns.lookup(os.hostname())
+        const [name] = await dns.resolvePtr(`${address.split(".").reverse().join(".")}.in-addr.arpa`)
+        return name?.match(/ws-server-\d+/)?.[0] ?? os.hostname()
+    } catch {
+        return os.hostname()
+    }
+}
+
+client.register.setDefaultLabels({ server: await serverName() })
+client.collectDefaultMetrics()
+new client.Gauge({
+    name: "ws_connections",
+    help: "Open WebSocket connections on this server",
+    collect() {
+        this.set(wss.clients.size)
+    },
+})
+
+// Prometheus reads this from each container directly. ws-lb blocks it from outside.
+app.get("/metrics", async (_req, res) => {
+    res.set("Content-Type", client.register.contentType)
+    res.end(await client.register.metrics())
+})
 
 const websocketsToIdMap = new Map();
 const idToWebsocketsMap = new Map();

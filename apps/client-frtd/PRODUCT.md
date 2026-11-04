@@ -29,7 +29,7 @@ Read-only. No accounts, orders, balances, or trading. Visitors keep the board op
 - Prices are simulated by `exchange-server` with a random walk. They are not real market data, and the UI must say so.
 - There is no history. Change, high, and low can only be measured from when the visitor opened the page, and must be labelled that way. There is no 24h change, volume, or market cap.
 - Messages have no server timestamp, so the UI cannot measure end-to-end latency.
-- Compose runs 4 `ws-server` containers behind `ws-lb`. The browser cannot tell which one it reached, so the UI must not show node identity or a node count.
+- Compose runs 4 `ws-server` containers behind `ws-lb`. The browser cannot tell which one it reached, so the UI must not show node identity or a node count. Per-server stats live in Grafana on port 3002, not in this UI.
 
 ## Brand Commitments
 
