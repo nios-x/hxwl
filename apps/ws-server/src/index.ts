@@ -11,8 +11,6 @@ const kafka = new Kafka({
 })
 const consumer = kafka.consumer({ groupId: `ws-${crypto.randomUUID()}` });
 await consumer.connect()
-
-// A regex subscription only matches existing topics, so wait for exchange-server to create them
 const admin = kafka.admin()
 await admin.connect()
 while (!(await admin.listTopics()).some(t => t.startsWith("prices-"))) {
@@ -20,20 +18,19 @@ while (!(await admin.listTopics()).some(t => t.startsWith("prices-"))) {
 }
 await admin.disconnect()
 
+
+
 await consumer.subscribe({ topics: [/^prices-.*/], fromBeginning: false })
+
 
 
 const app = express() 
 const PORT = 3001
-
 const server = app.listen(PORT, () => {
     console.log("Application is listening on", PORT);
 })
 
 const wss = new WebSocketServer({ server: server })
-
-// Docker's DNS knows each replica by the name "docker compose ps" shows, so charts can use it.
-// Outside Docker there is no such name, so fall back to the hostname.
 async function serverName() {
     try {
         const { address } = await dns.lookup(os.hostname())
@@ -43,6 +40,7 @@ async function serverName() {
         return os.hostname()
     }
 }
+
 
 client.register.setDefaultLabels({ server: await serverName() })
 client.collectDefaultMetrics()
@@ -54,11 +52,13 @@ new client.Gauge({
     },
 })
 
-// Prometheus reads this from each container directly. ws-lb blocks it from outside.
+
 app.get("/metrics", async (_req, res) => {
     res.set("Content-Type", client.register.contentType)
     res.end(await client.register.metrics())
 })
+
+
 
 const websocketsToIdMap = new Map();
 const idToWebsocketsMap = new Map();

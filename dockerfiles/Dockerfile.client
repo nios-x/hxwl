@@ -1,5 +1,3 @@
-# Build from the repo root:
-#   docker build -f dockerfiles/Dockerfile.client -t hawsl-client .
 
 FROM oven/bun:1.3.14-slim AS manifests
 WORKDIR /app
@@ -18,7 +16,7 @@ RUN bun install --frozen-lockfile
 FROM manifests AS prod-deps
 RUN bun install --frozen-lockfile --production --filter web
 
-# next build and next start run on Node, matching the engines field in package.json
+
 FROM node:24-slim AS build
 WORKDIR /app
 COPY --from=deps /app ./
